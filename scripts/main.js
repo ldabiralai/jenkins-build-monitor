@@ -1,25 +1,81 @@
 $(document).ready(function () { Main.run(); });
 
+var returnedJSON;
+var returnedJSONofJob;
+
 var Main = {
 	run: function () {
-		console.log("running...");
-		JenkinsJSON.run();
+		//run this every 1 second to keep up to date info
+		setInterval(function () {
+			JenkinsJSON.run(JenkinsJSON.mainJenkinsUrl);
+		}, 500);
+		//delay this so as to have JSON needed above
+		setTimeout(function () {
+			pageInfo.run();
+		}, 501);
+		
 	}
 }
 
 var JenkinsJSON = {
 
-	mainJenkinsUrl: "http://10.0.0.80:8080",
+	mainJenkinsUrl: "http://10.0.0.80:8080/job/test/",
 
-	run: function () {
-		console.log("JSON functions running");
-		console.log(JenkinsJSON.mainJenkinsUrl);
-		JenkinsJSON.getData();
+	run: function (url) {
+		JenkinsJSON.getData(url);
 	},
 
-	getData: function () {
-		$.getJSON(JenkinsJSON.mainJenkinsUrl + "/api/json", function(json) {
-			console.log("Result: " + json.jobs.color);
-		})
+	getData: function (url) {
+		$.ajax({
+			type: 'GET',
+			url: url + "api/json",
+			contentType: "application/json",
+			dataType: 'jsonp',
+			success: function (jsonp) {
+				returnedJSON = jsonp;
+			},
+			jsonp: 'jsonp'
+		});
+	},
+
+	getDataOfJob: function (url) {
+		$.ajax({
+			type: 'GET',
+			url: url += "api/json",
+			contentType: "application/json",
+			dataType: 'jsonp',
+			success: function (jsonp) {
+				returnedJSONofJob = jsonp;
+			},
+			jsonp: 'jsonp'
+		});
+	}
+}
+
+var pageInfo = {
+	run: function (jsonp) {
+		setInterval(function() {
+			console.log(returnedJSON.lastBuild.url);
+			pageInfo.update(returnedJSON);
+		}, 1001);
+	},
+
+	update: function (jsonp) {
+		// update project name..
+		$("#job").html('').append("Job: " + jsonp.displayName);
+		
+		// get current build status
+		url = JenkinsJSON.getDataOfJob(jsonp.lastBuild.url);
+		console.log(returnedJSONofJob);
+		if(returnedJSONofJob.result == "FAILURE") {
+			$("#buildStatus").removeClass();
+			$("#buildStatus").addClass("fail");
+		} else if (returnedJSONofJob.result == null) {
+			$("#buildStatus").removeClass();
+			$("#buildStatus").addClass("building");
+		} else {
+			$("#buildStatus").removeClass();
+			$("#buildStatus").addClass("success");
+		}
 	}
 }
